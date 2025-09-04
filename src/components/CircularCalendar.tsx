@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns'
 
 interface Task {
   id: string
   title: string
+  description: string
   date: string
   completed: boolean
   priority: 'low' | 'medium' | 'high'
+  category: string
   x?: number
   y?: number
+  isDragging?: boolean
 }
 
 interface CircularCalendarProps {
