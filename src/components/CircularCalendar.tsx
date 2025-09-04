@@ -22,141 +22,252 @@ interface CircularCalendarProps {
 
 export default function CircularCalendar({ tasks, onDateClick, onTaskClick }: CircularCalendarProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date())
-  
-  const weekStart = startOfWeek(currentWeek)
+
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-  
+
   const getTasksForDate = (date: Date) => {
-    return tasks.filter(task => isSameDay(new Date(task.date), date))
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return tasks.filter(task => task.date === dateStr)
   }
-  
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'from-red-400 to-red-600'
-      case 'medium': return 'from-yellow-400 to-orange-500'
-      case 'low': return 'from-green-400 to-emerald-500'
-      default: return 'from-gray-400 to-gray-600'
+      case 'high': return 'bg-red-500'
+      case 'medium': return 'bg-yellow-500'
+      case 'low': return 'bg-green-500'
+      default: return 'bg-blue-500'
     }
   }
 
   return (
-    <div className="relative w-full h-96 flex items-center justify-center">
-      {/* Circular Calendar Layout */}
-      <div className="relative w-80 h-80">
-        {weekDays.map((date, index) => {
-          const angle = (index * 360) / 7 - 90
-          const radius = 120
-          const x = Math.cos((angle * Math.PI) / 180) * radius
-          const y = Math.sin((angle * Math.PI) / 180) * radius
-          const dayTasks = getTasksForDate(date)
-          
-          return (
-            <div
-              key={date.toISOString()}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group"
-              style={{
-                left: `calc(50% + ${x}px)`,
-                top: `calc(50% + ${y}px)`,
-              }}
-              onClick={() => onDateClick(format(date, 'yyyy-MM-dd'))}
-            >
-              {/* Date Circle */}
-              <div className="relative">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  {format(date, 'd')}
+    <div className="relative">
+      {/* Week Navigation - Mobile Optimized */}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <button
+          onClick={() => setCurrentWeek(addDays(currentWeek, -7))}
+          className="p-3 rounded-full bg-white/20 active:bg-white/30 text-white transition-colors touch-manipulation"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-lg md:text-xl font-semibold text-white text-center">
+          {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d')}
+        </h2>
+        <button
+          onClick={() => setCurrentWeek(addDays(currentWeek, 7))}
+          className="p-3 rounded-full bg-white/20 active:bg-white/30 text-white transition-colors touch-manipulation"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile-First Calendar Layout */}
+      <div className="block md:hidden">
+        {/* Mobile Week View - Horizontal Scroll */}
+        <div className="flex gap-2 overflow-x-auto pb-4 px-2">
+          {weekDays.map((date, index) => {
+            const tasksForDate = getTasksForDate(date)
+            const isToday = isSameDay(date, new Date())
+
+            return (
+              <div
+                key={index}
+                onClick={() => onDateClick(format(date, 'yyyy-MM-dd'))}
+                className={`flex-shrink-0 w-20 h-24 rounded-2xl p-3 cursor-pointer transition-all duration-200 active:scale-95 ${
+                  isToday 
+                    ? 'bg-white/30 border-2 border-white/60' 
+                    : 'bg-white/10 border border-white/20'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-white/70 text-xs font-medium mb-1">
+                    {format(date, 'EEE')}
+                  </div>
+                  <div className="text-white text-lg font-bold mb-2">
+                    {format(date, 'd')}
+                  </div>
+                  
+                  {/* Task indicators */}
+                  <div className="flex justify-center gap-1">
+                    {tasksForDate.slice(0, 3).map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onTaskClick(task)
+                        }}
+                        className={`w-2 h-2 rounded-full ${getPriorityColor(task.priority)} ${
+                          task.completed ? 'opacity-50' : ''
+                        }`}
+                      />
+                    ))}
+                    {tasksForDate.length > 3 && (
+                      <div className="text-white/70 text-xs">+{tasksForDate.length - 3}</div>
+                    )}
+                  </div>
                 </div>
-                
-                {/* Progress Ring */}
-                {dayTasks.length > 0 && (
-                  <div className="absolute inset-0 rounded-full border-4 border-transparent">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 64 64">
-                      <circle
-                        cx="32"
-                        cy="32"
-                        r="28"
-                        fill="none"
-                        stroke="rgba(255,255,255,0.3)"
-                        strokeWidth="4"
-                      />
-                      <circle
-                        cx="32"
-                        cy="32"
-                        r="28"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="4"
-                        strokeDasharray={`${(dayTasks.filter(t => t.completed).length / dayTasks.length) * 175.929} 175.929`}
-                        className="transition-all duration-500"
-                      />
-                    </svg>
-                  </div>
-                )}
               </div>
-              
-              {/* Floating Task Bubbles */}
-              {dayTasks.map((task, taskIndex) => {
-                const bubbleAngle = (taskIndex * 60) - 30
-                const bubbleRadius = 35
-                const bubbleX = Math.cos((bubbleAngle * Math.PI) / 180) * bubbleRadius
-                const bubbleY = Math.sin((bubbleAngle * Math.PI) / 180) * bubbleRadius
-                
-                return (
-                  <div
-                    key={task.id}
-                    className={`absolute w-8 h-8 rounded-full bg-gradient-to-r ${getPriorityColor(task.priority)} 
-                      flex items-center justify-center text-xs text-white font-medium shadow-md
-                      hover:scale-125 transition-all duration-300 cursor-pointer animate-pulse
-                      ${task.completed ? 'opacity-50 line-through' : ''}`}
-                    style={{
-                      left: `calc(50% + ${bubbleX}px)`,
-                      top: `calc(50% + ${bubbleY}px)`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onTaskClick(task)
-                    }}
-                    title={task.title}
-                  >
-                    {task.title.charAt(0).toUpperCase()}
+            )
+          })}
+        </div>
+
+        {/* Today's Tasks - Mobile */}
+        <div className="mt-6">
+          <h3 className="text-white font-semibold mb-3 px-2">Today's Tasks</h3>
+          <div className="space-y-2 px-2">
+            {getTasksForDate(new Date()).map((task) => (
+              <div
+                key={task.id}
+                onClick={() => onTaskClick(task)}
+                className={`p-4 rounded-xl bg-white/10 border border-white/20 cursor-pointer active:scale-98 transition-all duration-200 ${
+                  task.completed ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${getPriorityColor(task.priority)}`} />
+                    <span className={`text-white ${task.completed ? 'line-through' : ''}`}>
+                      {task.title}
+                    </span>
                   </div>
-                )
-              })}
-            </div>
-          )
-        })}
-        
-        {/* Center Hub */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-700 flex items-center justify-center text-white font-bold shadow-xl">
-            <div className="text-center">
-              <div className="text-xs">Week</div>
-              <div className="text-sm">{format(weekStart, 'MMM d')}</div>
-            </div>
+                  <div className="text-white/60 text-sm">
+                    {task.category}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-      
-      {/* Week Navigation */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-4">
-        <button
-          onClick={() => setCurrentWeek(addDays(currentWeek, -7))}
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:scale-105 transition-transform duration-200 shadow-lg"
-        >
-          ← Prev
-        </button>
-        <button
-          onClick={() => setCurrentWeek(new Date())}
-          className="px-4 py-2 bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-full hover:scale-105 transition-transform duration-200 shadow-lg"
-        >
-          Today
-        </button>
-        <button
-          onClick={() => setCurrentWeek(addDays(currentWeek, 7))}
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full hover:scale-105 transition-transform duration-200 shadow-lg"
-        >
-          Next →
-        </button>
+
+      {/* Desktop Circular Calendar */}
+      <div className="hidden md:block">
+        <div className="relative w-80 h-80 lg:w-96 lg:h-96 mx-auto">
+          <svg viewBox="0 0 400 400" className="w-full h-full">
+            {/* Outer circle */}
+            <circle
+              cx="200"
+              cy="200"
+              r="180"
+              fill="none"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="2"
+            />
+            
+            {/* Inner circle */}
+            <circle
+              cx="200"
+              cy="200"
+              r="120"
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="1"
+            />
+
+            {/* Days of week */}
+            {weekDays.map((date, index) => {
+              const angle = (index * 360) / 7 - 90 // Start from top
+              const radian = (angle * Math.PI) / 180
+              const x = 200 + 150 * Math.cos(radian)
+              const y = 200 + 150 * Math.sin(radian)
+              const tasksForDate = getTasksForDate(date)
+              const isToday = isSameDay(date, new Date())
+
+              return (
+                <g key={index}>
+                  {/* Day circle */}
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="35"
+                    fill={isToday ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)"}
+                    stroke={isToday ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)"}
+                    strokeWidth="2"
+                    className="cursor-pointer hover:fill-white/20 transition-all duration-200"
+                    onClick={() => onDateClick(format(date, 'yyyy-MM-dd'))}
+                  />
+                  
+                  {/* Day number */}
+                  <text
+                    x={x}
+                    y={y + 5}
+                    textAnchor="middle"
+                    className="fill-white text-sm font-medium pointer-events-none"
+                  >
+                    {format(date, 'd')}
+                  </text>
+
+                  {/* Task bubbles */}
+                  {tasksForDate.slice(0, 3).map((task, taskIndex) => {
+                    const taskAngle = angle + (taskIndex - 1) * 15
+                    const taskRadian = (taskAngle * Math.PI) / 180
+                    const taskX = x + 50 * Math.cos(taskRadian)
+                    const taskY = y + 50 * Math.sin(taskRadian)
+
+                    return (
+                      <circle
+                        key={task.id}
+                        cx={taskX}
+                        cy={taskY}
+                        r="10"
+                        className={`${getPriorityColor(task.priority)} cursor-pointer hover:scale-125 transition-transform duration-200 ${
+                          task.completed ? 'opacity-50' : ''
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onTaskClick(task)
+                        }}
+                      />
+                    )
+                  })}
+
+                  {/* More tasks indicator */}
+                  {tasksForDate.length > 3 && (
+                    <text
+                      x={x}
+                      y={y - 25}
+                      textAnchor="middle"
+                      className="fill-white text-xs pointer-events-none"
+                    >
+                      +{tasksForDate.length - 3}
+                    </text>
+                  )}
+                </g>
+              )
+            })}
+
+            {/* Center decoration */}
+            <circle
+              cx="200"
+              cy="200"
+              r="40"
+              fill="rgba(255,255,255,0.1)"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="2"
+            />
+            <text
+              x="200"
+              y="205"
+              textAnchor="middle"
+              className="fill-white text-lg font-bold pointer-events-none"
+            >
+              ✨
+            </text>
+          </svg>
+        </div>
+
+        {/* Day names */}
+        <div className="flex justify-center mt-4 space-x-8">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+            <span key={index} className="text-white/70 text-sm font-medium">
+              {day}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )
